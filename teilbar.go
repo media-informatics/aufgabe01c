@@ -9,70 +9,68 @@ import (
 )
 
 func main() {
+	const suffix = ", "
 	var number string
 	flag.StringVar(&number, "n", "343", "Auf Teilbarkeit zu prüfende natürliche Zahl")
 	flag.Parse()
 
-	num := []byte(strings.TrimSpace(number))
-	if len(num) == 0 {
-		log.Fatalf("Keine gültige Zahl")
-	}
 	n, err := strconv.Atoi(number)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("ungültige Zahl %w", err)
+	}
+	if n < 0 {
+		n = -n
 	}
 
-	divisible := [10]bool{}
-	divisible[2] = (n&1 == 0)
+	divisible := [10]bool{} // mit make(map[uint]bool) haben keys zufällige Reihenfolge
 
-	last := num[len(num)-1]
-	divisible[5] = last == '5' || last == '0'
-
-	divisible[9] = isBy9(num)
-	divisible[3] = divisible[9] || isBy3(num)
+	divisible[2] = isBy2(n)
+	divisible[5] = isBy5(n)
+	divisible[9] = isBy9(n)
+	divisible[3] = divisible[9] || isBy3(n)
 	divisible[6] = divisible[2] && divisible[3]
 
-	fmt.Printf("Die Zahl %d wird ", n)
+	fmt.Printf("Die Zahl %d wird von ", n)
+	builder := strings.Builder{}
 	any := false
-	for _, divides := range divisible {
+	for k, divides := range divisible {
 		if divides {
 			any = true
+			builder.WriteString(fmt.Sprintf("%d%s", k, suffix))
 		}
 	}
-	if any {
-		fmt.Print("von ")
-		for k, divides := range divisible {
-			if divides {
-				fmt.Printf("%d, ", k)
-			}
-		}
-	} else {
-		fmt.Print("nicht von 2, 3, 5, 6, oder 9 ")
+	if !any {
+		builder.WriteString("2, 3, 5, 6, 9 nicht")
 	}
-	fmt.Println("geteilt")
+	fmt.Printf("%s geteilt.\n", strings.TrimSuffix(builder.String(), suffix))
 }
 
-func isBy9(num []byte) bool {
-	s := quersumme(num)
-	if s < 10 {
-		return s == 9
-	}
-	return isBy9([]byte(fmt.Sprint(s)))
+func isBy2(n int) bool {
+	return n&1 == 0
 }
 
-func isBy3(num []byte) bool {
-	s := quersumme(num)
-	if s < 10 {
-		return s == 3 || s == 6 || s == 9
-	}
-	return isBy3([]byte(fmt.Sprint(s)))
+func isBy5(n int) bool {
+	num := []byte(fmt.Sprint(n))
+	last := num[len(num)-1]
+	return last == '5' || last == '0'
 }
 
-func quersumme(num []byte) uint {
+func isBy9(n int) bool {
+	s := quersumme(n)
+	return s == 9 || (s > 9 && isBy9(s))
+}
+
+func isBy3(n int) bool {
+	s := quersumme(n)
+	return s == 3 || s == 6 || s == 9 || (s > 9 && isBy3(s))
+}
+
+func quersumme(n int) int {
+	num := []byte(fmt.Sprint(n))
 	const zero = byte('0')
-	var sum uint = 0
+	var sum int = 0
 	for _, d := range num {
-		sum += uint(d - zero)
+		sum += int(d - zero)
 	}
 	return sum
 }
